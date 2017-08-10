@@ -9,7 +9,7 @@ from keras.models import Model, Sequential
 from keras import backend as K
 from keras.optimizers import SGD
 from keras.callbacks import ModelCheckpoint, Callback, TensorBoard
-from utils_video_image import plot_chart
+from utils_video_image import plot_chart, psnr
 
 #Callback to print learning rate decaying over the epoches
 class LearningRatePrinter(Callback):
@@ -26,10 +26,9 @@ class LearningRatePrinter(Callback):
 #Main class autencoder
 class Autoencoder(object):
     def __init__(this, input_shape):
-        #input_img = Input(shape=(28, 28, 1))
-        this.createNetwork(input_shape)
+        this.createNetwork2D(input_shape)
 
-    def createNetwork(this, input_shape):
+    def createNetwork2D(this, input_shape):
         this.model = Sequential()
         #Input
         #input_img = shape=(28, 28, 1)
@@ -54,16 +53,27 @@ class Autoencoder(object):
         this.model.summary()
 
     ############################################################################
-    def evaluate(this, x_test, model_in, n):
+    def evaluate(this, x_test, x_test_original, model_in, n, shape):
         this.model.load_weights(model_in)
         a = this.model.predict(x_test)
 
         lst = []
-        for i in range(n):
-            lst.append(x_test[i].reshape(28, 28))
-            lst.append(a[i].reshape(28, 28))
+        titles = []
 
-        plot_chart(lst, 2, n, ax_vis = False, gray = True)
+        for i in range(n):
+            original = x_test_original[i].reshape(shape) 
+            reconst = a[i].reshape(shape) 
+            noisy = x_test[i].reshape(shape) 
+
+            lst.append(original)
+            lst.append(reconst)
+            lst.append(noisy)
+            
+            titles.append( "%.2f" % psnr(original, noisy))
+            titles.append( '' )
+            titles.append( '' )
+
+        plot_chart(lst, n, 3, ax_vis = False, gray = True, titles=titles, title = 'Psnr')
         
     ############################################################################
     def train(this, X_train, X_train_, X_test, X_test_, batch_size, epochs, out):

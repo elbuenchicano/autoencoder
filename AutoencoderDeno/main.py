@@ -18,6 +18,7 @@ def getNoisyDataMnist(noise_factor):
 
     x_train = x_train.astype('float32') / 255.
     x_test = x_test.astype('float32') / 255.
+
     x_train = np.reshape(x_train, (len(x_train), 28, 28, 1))  # adapt this if using `channels_first` image data format
     x_test = np.reshape(x_test, (len(x_test), 28, 28, 1))  # adapt this if using `channels_first` image data format
 
@@ -32,34 +33,47 @@ def getNoisyDataMnist(noise_factor):
 
 ################################################################################
 ################################################################################
-def getNoisyData(img_path, token, noise):
+def getNoisyData(img_path, token, noise, auto_type):
     
     files = u_listFileAll(img_path, token)
     clean = []
-    noisy = []
+    
+    flag = 1 if auto_type  else 0
     for file in files:
         print('Reading file: ', file)
-        img         = cv2.imread(file,0)/255
-        img_noisy   = img + noise * np.random.normal(loc=0.0, scale=1.0, size=img.shape) 
-        img_noisy   = np.clip(img_noisy, 0., 1.)
+        img         = cv2.imread(file, flag)/255
         clean.append(img)
-        noisy.append(img_noisy)
-        #plot_chart([img, img_noisy], 2, 1)
     
+    #get dimensions
+    shape = clean[0].shape
+    if not auto_type: shape += (1,)
+
+    #reshaping to net
+    clean   = np.reshape(clean, (len(clean), shape[0], shape[1], shape[2])) 
+
+    #adding noise to clean images
+    noisy   = clean + noise * np.random.normal(loc=0.0, scale=1.0, size=clean.shape) 
+    
+    #clipping 0 1 
+    noisy   = np.clip(noisy, 0., 1.)
+
+    #dividing in test and train
     x_train, x_test, y_train, y_test = train_test_split(
         clean, noisy, test_size=0.3, random_state=0)
 
-    shape = clean[0].shape
-    
-    return x_train, x_test, y_test, y_test, shape;
+    return x_train, x_test, y_train, y_test, shape;
 
 ################################################################################
 ################################################################################
 def train(general, data):
   
+    #noise factor that will be added to images
     noise       = general['noise']
+
     model_out   = general['model_name']
-    model_out   = general['model_name']
+
+    #this flag is to define the autoencoder type 0 = 2D, 1 = 3D
+    auto_type   = general['auto_type']
 
     bach_size   = data['batch_size']
     epochs      = data['epochs']
@@ -68,7 +82,9 @@ def train(general, data):
 
     #x_train, x_test, x_train_noisy, x_test_noisy, shape = getNoisyDataMnist(noise)
     x_train, x_test, x_train_noisy, x_test_noisy, shape = getNoisyData(
-        img_path, img_token, noise)
+        img_path, img_token, noise, auto_type)
+
+    #plot_chart([x_train[0].reshape(128,128), x_train_noisy[0].reshape(128,128)], 1, 2)
 
     autoencoder = Autoencoder(shape)
     autoencoder.train(X_train   = x_train_noisy, 
@@ -85,17 +101,28 @@ def train(general, data):
 ################################################################################
 def test(general, data):
 
+    #noise factor that will be added to images
     noise       = general['noise']
+
     model_in    = general['model_name']
+
+    #this flag is to define the autoencoder type 0 = 2D, 1 = 3D
+    auto_type   = general['auto_type']
+
     ntest       = data['ntest']
     img_path    = data['img_path']
     img_token   = data['img_token']
 
-    x_train, x_test, x_train_noisy, x_test_noisy, shape = getNoisyDataMnist(noise)
+    #x_train, x_test, x_train_noisy, x_test_noisy, shape = getNoisyDataMnist(noise)
+    x_train, x_test, x_train_noisy, x_test_noisy, shape = getNoisyData(
+        img_path, img_token, noise, auto_type)
+
     autoencoder = Autoencoder(shape)
-    autoencoder.evaluate(x_test_noisy, model_in, ntest)
-    
-    #setNoisyData(img_path, img_token, shape[2], noise)
+
+    if shape[2] == 1:
+        shape = (shape[0], shape[1])
+
+    autoencoder.evaluate(x_test_noisy, x_test, model_in, ntest, shape)
 
 
 ################################################################################
