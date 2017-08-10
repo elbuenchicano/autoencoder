@@ -1,0 +1,6 @@
+/.vs/AutoencoderDeno/v15/.suo
+/AutoencoderDeno/__pycache__/Auto.cpython-35.pyc
+/AutoencoderDeno/__pycache__/Autoencoder.cpython-35.pyc
+/AutoencoderDeno/__pycache__/utils.cpython-35.pyc
+/AutoencoderDeno/__pycache__/utils_video_image.cpython-35.pyc
+/AutoencoderDeno/weights.h5
